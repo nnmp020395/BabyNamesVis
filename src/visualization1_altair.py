@@ -67,7 +67,7 @@ if prenom_cible:
         .mark_bar()
         .encode(
             x=alt.X('nombre:Q', title='Nombre de naissances'),
-            y=alt.Y('rang_label:N', sort='-x', title='Rang – Prénom'),
+            y=alt.Y('rang_label:N', sort='-x', title='Prénom'),
             color=alt.condition(
                 'datum.is_target',
                 alt.value('crimson'),
