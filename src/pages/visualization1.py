@@ -20,7 +20,7 @@ INFO_FILE = PROJECT_ROOT / "data" / "yearly_info.csv"
 def normalize_prenom(name):
     return unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode().lower()
 
-st.title("Évolution de la popularité des prénoms en France")
+st.title("Baby names popularity evolution over time in France")
 
 # Chargement des données
 df = load_and_clean_data(DATA_FILE)
@@ -33,13 +33,13 @@ info_df['year'] = info_df['year'].astype(int)
 min_year = df['annais'].min()
 max_year = df['annais'].max()
 
-selected_year = st.slider("Sélectionnez une année", min_value=min_year, max_value=max_year, value=1900, step=1)
+selected_year = st.slider("Select a year", min_value=min_year, max_value=max_year, value=1900, step=1)
 
 # Nom cible
-raw_input = st.text_input("Suivre un prénom :", value="", placeholder="ex: Emma")
+raw_input = st.text_input("Follow a name :", value="", placeholder="ex: Emma")
 prenom_cible = normalize_prenom(raw_input.strip())
 
-show_last_10 = st.checkbox("Afficher les 10 derniers prénoms du classement")
+show_last_10 = st.checkbox("Display the 10 least popular names", value=False)
 
 if prenom_cible:
     df_grouped = df.groupby(['annais', 'preusuel'], as_index=False)['nombre'].sum()
@@ -67,14 +67,14 @@ if prenom_cible:
         alt.Chart(df_window)
         .mark_bar()
         .encode(
-            x=alt.X('nombre:Q', title='Nombre de naissances'),
+            x=alt.X('nombre:Q', title='Number or births'),
             y=alt.Y('rang_label:N', sort='-x', title='Prénom'),
             color=alt.condition('datum.is_target', alt.value('crimson'), alt.value('steelblue')),
             tooltip=['rang', 'preusuel', 'nombre']
         )
         .transform_filter(alt.datum.annais == selected_year)
         .properties(
-            title=f"Classement autour de {raw_input.strip().capitalize()} en {selected_year}",
+            title=f"Ranking around {raw_input.strip().capitalize()} in {selected_year}",
             height=400
         )
     )
@@ -103,7 +103,7 @@ if prenom_cible:
     ).resolve_scale(
         y='independent'
     ).properties(
-        title=f"Évolution du rang et du nombre de naissances pour {raw_input.strip().capitalize()}",
+        title=f"Ranking evolution and number of births for {raw_input.strip().capitalize()}",
         height=400,
         width=800
     ).interactive()
@@ -123,14 +123,14 @@ else:
             .apply(lambda x: x.nsmallest(10, 'nombre'))
             .reset_index(drop=True)
         )
-        chart_title = "Classement des prénoms les MOINS populaires"
+        chart_title = "Ranking of the LEAST popular names"
     else:
         top_per_year = (
             top_per_year.groupby('annais', group_keys=False, observed=True)
             .apply(lambda x: x.nlargest(10, 'nombre'))
             .reset_index(drop=True)
         )
-        chart_title = "Classement des prénoms les PLUS populaires"
+        chart_title = "Ranking of the MOST popular names"
 
     top_per_year['rang'] = (
         top_per_year.groupby('annais')['nombre']
@@ -159,7 +159,7 @@ else:
 info_row = info_df[info_df['year'] == selected_year]
 
 if not info_row.empty:
-    st.sidebar.markdown("### ℹ️ Contexte historique")
+    st.sidebar.markdown("### ℹ️ Key insights")
     st.sidebar.info(info_row.iloc[0]['info'])
 else:
-    st.sidebar.info("Pas d'information disponible pour cette année.")
+    st.sidebar.info("No information available for this year.")
