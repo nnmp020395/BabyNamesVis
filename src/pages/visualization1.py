@@ -20,7 +20,7 @@ INFO_FILE = PROJECT_ROOT / "data" / "yearly_info.csv"
 def normalize_prenom(name):
     return unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode().lower()
 
-st.title("Baby names popularity evolution over time in France")
+st.title("🏆 Baby names popularity evolution over time in France")
 
 # Chargement des données
 df = load_and_clean_data(DATA_FILE)
@@ -68,7 +68,7 @@ if prenom_cible:
         .mark_bar()
         .encode(
             x=alt.X('nombre:Q', title='Number or births'),
-            y=alt.Y('rang_label:N', sort='-x', title='Prénom'),
+            y=alt.Y('rang_label:N', sort='-x', title='Name'),
             color=alt.condition('datum.is_target', alt.value('crimson'), alt.value('steelblue')),
             tooltip=['rang', 'preusuel', 'nombre']
         )
@@ -78,6 +78,8 @@ if prenom_cible:
             height=400
         )
     )
+    st.subheader(f"Ranking around '{raw_input.strip().capitalize()}' in {selected_year}")
+
     st.altair_chart(chart, use_container_width=True)
 
     line_rank = alt.Chart(df_target).mark_line(color='orange').encode(
@@ -107,6 +109,7 @@ if prenom_cible:
         height=400,
         width=800
     ).interactive()
+    st.subheader(f"Ranking evolution and number of births for '{raw_input.strip().capitalize()}'")
 
     st.altair_chart(combined_chart)
 
@@ -144,7 +147,7 @@ else:
         alt.Chart(top_per_year)
         .mark_bar()
         .encode(
-            x=alt.X('nombre:Q', title='Nombre de naissances'),
+            x=alt.X('nombre:Q', title='Number of births'),
             y=alt.Y('rang_label:N', sort='-x', title=chart_title),
             tooltip=['rang', 'preusuel', 'nombre'],
             color=alt.Color('preusuel:N', legend=None)
@@ -152,8 +155,138 @@ else:
         .transform_filter(alt.datum.annais == selected_year)
         .properties(height=400)
     )
+    st.subheader(f"🥇 Top ten names for the year {selected_year}" if not show_last_10 else f"Least popular ten names for the year {selected_year}")
 
     st.altair_chart(chart, use_container_width=True)
+
+
+    # Compute top or bottom 10 names in the selected year only
+    current_year_data = (
+        df[df['annais'] == selected_year]
+        .groupby('preusuel', as_index=False)['nombre']
+        .sum()
+    )
+
+    if show_last_10:
+        top_names = current_year_data.nsmallest(10, 'nombre')['preusuel'].tolist()
+        chart_title = "Ranking of the LEAST popular names"
+    else:
+        top_names = current_year_data.nlargest(10, 'nombre')['preusuel'].tolist()
+        chart_title = "Ranking of the MOST popular names"
+
+    # Compute ranking per year for these names
+    df_grouped = df.groupby(['annais', 'preusuel'], as_index=False)['nombre'].sum()
+
+    df_grouped['rang'] = (
+        df_grouped.groupby('annais')['nombre']
+        .rank(method='first', ascending=False)
+        .astype(int)
+    )
+
+
+    # Filter only the top names selected and restrict to ranks 1 to 10
+    # top_names_df = df_grouped[
+    #     (df_grouped['preusuel'].isin(top_names)) & (df_grouped['rang'] <= 10)
+    # ]
+
+    # Filter based on top or bottom names logic
+    if show_last_10:
+        top_names_df = df_grouped[df_grouped['preusuel'].isin(top_names)]
+        chart_title = "Ranking evolution of the 10 least popular names"
+    else:
+        top_names_df = df_grouped[
+            (df_grouped['preusuel'].isin(top_names)) & (df_grouped['rang'] <= 10)
+        ]
+        chart_title = "Ranking evolution of the 10 most popular names"
+
+
+    
+
+    # Line chart of ranking evolution
+    rank_chart = (
+        alt.Chart(top_names_df)
+        .mark_line()
+        .encode(
+            x=alt.X('annais:O', title='Year'),
+            y=alt.Y('rang:Q', scale=alt.Scale(reverse=True), title='Rank (1=Top)'),
+            color='preusuel:N',
+            tooltip=['annais', 'preusuel', 'rang']
+        )
+    )
+
+    # Get the last year for each name to label the end of each line
+    label_data = top_names_df.sort_values('annais').groupby('preusuel').head(1)
+
+    line_labels = alt.Chart(label_data).mark_text(
+        align='center',
+        baseline='bottom',
+        dx=5, 
+        dy=-5  
+    ).encode(
+        x='annais:O',
+        y='rang:Q',
+        text='preusuel',
+        color='preusuel:N'
+    )
+
+
+    # Vertical line for selected year
+    vertical_line = (
+        alt.Chart(pd.DataFrame({'annais': [selected_year]}))
+        .mark_rule(color='red', strokeDash=[5, 5])
+        .encode(x='annais:O')
+    )
+
+    # Combine line chart and vertical line
+    # combined_chart = alt.layer(
+    #     rank_chart, vertical_line
+    # ).properties(
+    #     title=f"Ranking evolution of 10 names in {selected_year}",
+    #     height=400,
+    #     width=800
+    # ).interactive()
+
+    # combined_chart = alt.layer(rank_chart, vertical_line).configure_view(
+    #     stroke=None
+    # ).configure_axis(
+    #     labelFontSize=12,
+    #     titleFontSize=14
+    # ).configure_legend(
+    #     titleFontSize=13,
+    #     labelFontSize=12,
+    #     orient='bottom'
+    # ).properties(
+    #     title=chart_title + f" in {selected_year}",
+    #     height=450,
+    #     width=850,
+    #     padding={"top": 10, "bottom": 50, "left": 5, "right": 5}
+    # ).interactive()
+
+    combined_chart = alt.layer(
+        rank_chart, vertical_line, line_labels
+    ).properties(
+        #title=f"Global evolution of the ranking of the top ten names of {selected_year}",
+        height=450,
+        width=850,
+        padding={"top": 10, "left": 10, "right": 60, "bottom": 40}
+    ).configure_axis(
+        labelFontSize=12,
+        titleFontSize=14,
+        labelAngle=0
+    ).configure_legend(
+        orient='bottom',
+        titleFontSize=14,
+        labelFontSize=14
+    ).configure_view(
+        stroke=None, 
+        clip=False
+    ).interactive()
+
+    st.subheader(f"📊 Global evolution of the ranking of the {'most' if not show_last_10 else 'least'} popular ten names in {selected_year}")
+
+
+    st.altair_chart(combined_chart, use_container_width=True)
+
 
 # Info panel (uses the same selected_year)
 info_row = info_df[info_df['year'] == selected_year]

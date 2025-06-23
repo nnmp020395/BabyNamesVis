@@ -5,7 +5,7 @@ from pathlib import Path
 st.set_page_config(page_title="My App Home", layout="wide")
 
 # Title
-st.title("Welcome to our Babynames visualization app")
+st.title("🎉 Welcome to our Babynames visualization app ! ")
 
 # Get the current directory of this script (i.e., src/)
 current_dir = Path(__file__).resolve().parent
@@ -26,7 +26,8 @@ with col1:
 # Page 2 Block
 with col2:
     st.image(str(img_dir / "baby2.jpg"))
-    st.image(str(img_dir / "visu1.png"))#, use_container_width=True)
+    # make image smaller
+    st.image(str(img_dir / "visu2.png"),  width=400)
     if st.button("Go to Visualization 2"):
         st.switch_page("pages/visualization2.py")
 
