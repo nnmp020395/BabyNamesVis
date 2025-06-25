@@ -427,7 +427,13 @@ def heatmap_line_percent(data_base, data):
                 scale=alt.Scale(reverse=True),
                 axis=alt.Axis(values=list(range(0, 101, 10))),
         ),
-        color=alt.Color('value:Q', scale=alt.Scale(scheme='greens'), title='Pourcents (%)')
+        color=alt.Color('value:Q', 
+                        scale=alt.Scale(
+                            scheme='greens'), 
+                            #domain=[0, 50, 100],      
+                            #range=['bleu', 'white', 'red']
+                        #),
+                        title='Pourcents (%)')
     ).properties(
         width=600,
         height=500,
