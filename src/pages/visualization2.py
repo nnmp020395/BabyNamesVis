@@ -127,7 +127,7 @@ st.markdown("---")
 col1, col2 = st.columns([6, 4])
 
 with col1:
-    st.markdown("## 👶 Choropleth Map by Name")
+    st.markdown("## Choropleth Map by Name")
 
     all_names = sorted(df_proportions_filtered['preusuel'].unique())
 
@@ -136,7 +136,7 @@ with col1:
             "Choose a name to visualize:",
             options=all_names,
             index=0,
-            help="Type the first letters to filter (e.g., 'RO' for ROMAIN, ROBIN, ROBERT...)",
+            help="Type the first letters to filter",
             placeholder="Type to search for a name..."
         )
         name_data = df_proportions_filtered[df_proportions_filtered['preusuel'] == selected_name]
@@ -200,7 +200,7 @@ with col1:
             """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("### 📍 Regional Details")
+    st.markdown("### Regional Details")
     regions = sorted(df['region_name'].dropna().unique())
     selected_region = st.selectbox("Select a region:", options=regions)
 
