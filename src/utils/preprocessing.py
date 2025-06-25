@@ -216,6 +216,7 @@ def create_names_by_regions_proportion_csv(input_csv_path, output_csv_path):
 ###############################################################################
 # Visualisation 3
 ###############################################################################
+
 class Dataset:
     def __init__(self, df):
         self.df = df
@@ -246,6 +247,17 @@ class Dataset:
         else:
             return self.df['preusuel'].unique()
 
+    def get_dataset_by_gender(self, sexe=None):
+        if sexe == 'B':
+            return self.df[self.df['sexe'] == 1]
+        elif sexe == 'G':
+            return self.df[self.df['sexe'] != 1]
+        elif sexe == 'M':
+            mixed_names = self.get_mixed_names()
+            return self.df[self.df['preusuel'].isin(mixed_names)]
+        else:
+            return self.df.copy()
+
     def get_name_counts(self, sexe=None):
         return self.df.groupby('preusuel').size().reset_index(name='count')
 
@@ -270,19 +282,31 @@ class Dataset:
         mixed_names = np.intersect1d(boys_names, girls_names)
         return mixed_names
 
-    def get_global_gender_counts(self):
+    def get_global_gender_counts(self, with_mixed=False):
         grouped_annais_sexe = self.df.groupby(['annais', 'sexe'])['nombre'].sum().reset_index()
-        mixed_names = self.get_mixed_names()
-        df_mixte = self.df[self.df['preusuel'].isin(mixed_names)]
-        mixte_grouped_annais = df_mixte.groupby(['annais'])['nombre'].sum().reset_index()
-        mixte_grouped_annais['sexe'] = 3  # Ajouter une colonne pour indiquer que c'est mixte
+        if with_mixed:
+            mixed_names = self.get_mixed_names()
+            df_mixte = self.df[self.df['preusuel'].isin(mixed_names)]
+            mixte_grouped_annais = df_mixte.groupby(['annais'])['nombre'].sum().reset_index()
+            mixte_grouped_annais['sexe'] = 3  # Ajouter une colonne pour indiquer que c'est mixte
 
-        # Fusionner les deux DataFrames
-        merged_df = pd.concat([grouped_annais_sexe, mixte_grouped_annais], ignore_index=True)
+            # Fusionner les deux DataFrames
+            merged_df = pd.concat([grouped_annais_sexe, mixte_grouped_annais], ignore_index=True)
+            pivot_cols = ['boys', 'girls', 'mixed']
+
+        merged_df = grouped_annais_sexe.copy(ignore_index=True)
+        pivot_cols = ['boys', 'girls']
         pivot_merged_df = merged_df.pivot(index='annais', columns='sexe', values='nombre')
-        pivot_merged_df.columns = ['boys', 'girls', 'mixed']
-        print("pivot_merged_df \n", pivot_merged_df.head())
+        pivot_merged_df.columns = pivot_cols
+        # print("pivot_merged_df \n", pivot_merged_df.head())
         return pivot_merged_df.reset_index()
+
+    def convert_to_pct(self):
+        # assurer que les colonnes sont bien annais, sexe, preuseul, nombre
+        grouped_df = self.df.groupby(['annais', 'sexe'])['nombre'].sum().reset_index()
+        total_per_annais = grouped_df.groupby('annais')['nombre'].transform('sum')
+        grouped_df['pct'] = grouped_df['nombre']/total_per_annais * 100
+        return grouped_df
 
 
 def plot_stacked_area_chart(data, start_year, end_year, name_selected=None, gender_selected=None):
@@ -347,5 +371,80 @@ def line_chart_mixed_names(data, start_year, end_year):
         height=400,
         title=titre
     )
+    return chart
 
+
+def multi_line_tooltip_by_gender(data):
+    mapping = {1: 'A-Boys', 2: 'B-Boys mixed names', 3: 'C-Girls', 4: 'D-Girls mixed names'}
+    data['sexe_label'] = data['sexe'].map(mapping)
+
+    # Encode line style as string (not list!)
+    def dash_style(label):
+        return 'solid' if 'mixed' in label else 'dashed'
+
+    data['line_style'] = data['sexe_label'].apply(dash_style)
+
+
+    color_scale = alt.Scale(
+        domain=['boys', 'mixed boys', 'girls', 'mixed girls'],
+        range=["#0af7db", "#eca9cb", "#038a7b", "#986780"]
+    )
+
+    # line = alt.Chart(data).mark_line(interpolate="basis").encode(
+    #     x="annais:T",
+    #     y=alt.Y("nombre:Q"),
+    #     color=alt.Color("sexe_label:N", scale=color_scale, title="Sexe"),
+    #     strokeDash=alt.StrokeDash("line_style:N", legend=None)
+    # )
+
+    area = alt.Chart(data).mark_area().encode(
+        alt.X("annais:T").axis(format="%Y", domain=False, grid=True ),
+        alt.Y("nombre:Q").stack("center").axis(None),
+        alt.Color("sexe_label:N").scale(scheme="category20"),
+        ).properties(
+            width=900,
+            height=500,
+    )
+    return area
+
+def heatmap_line_percent(data_base, data):
+    x = data_base['annais'].unique()
+    y = np.arange(101)
+    xx, yy = np.meshgrid(x, y, indexing='ij')  # indexing='ij' pour avoir x en lignes, y en colonnes
+    # Créer un compteur croissant pour value
+    value = np.array([np.arange(101)] * data_base['annais'].unique().shape[0])
+    df = pd.DataFrame({
+        'x': xx.flatten(),
+        'y': yy.flatten(),
+        'value': value.flatten()
+    })
+
+    # Création de la heatmap Altair
+    heatmap_base = alt.Chart(df).mark_rect().encode(
+        x=alt.X('x:T', title='Years').axis(format="%Y"),
+        y=alt.Y('y:O',
+                title='Pourcents',
+                scale=alt.Scale(reverse=True),
+                axis=alt.Axis(values=list(range(0, 101, 10))),
+        ),
+        color=alt.Color('value:Q', scale=alt.Scale(scheme='greens'), title='Pourcents (%)')
+    ).properties(
+        width=600,
+        height=500,
+        # title='Heatmap [100x100] - valeur de 0 à 100%'
+    )
+
+    # superposer line sur le heatmap, choisir seulement la ligne des noms mixtes portés par une fille
+    source = data[data['sexe'] == data['sexe'].unique()[1]]
+    line = alt.Chart(source).mark_line().encode(
+        x=alt.X("annais:T"),
+        y=alt.Y("pct:Q").axis(None),
+        color=alt.Color("sexe:N",
+                        title="Sexe",
+                        scale=alt.Scale(domain=source['sexe'].unique(), range=["black"]),
+                        legend=alt.Legend(title="Sexe",
+                                labelExpr=f"datum.value == {source['sexe'].unique()} ? 'Girls' : ''")
+                        )
+    )
+    chart = alt.layer(heatmap_base + line)
     return chart
