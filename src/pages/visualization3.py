@@ -116,7 +116,7 @@ pills_elements = pills("TOP 10 MIXED NAMES",
                 ["👶🏼"]*10,
                 index=None,)
 st.markdown(f"""
-        <div style='text-align: right; font-style: italic; color: #666;'>
+        <div style='text-align: left; font-style: italic; color: #666;'>
         Click on a name from top 10 to learn more""",
         unsafe_allow_html=True)
 
