@@ -33,7 +33,7 @@ st.title("Evolution of Baby Names by Gender over the years")
 # )
 st.markdown(
     """
-    <div style='text-align: center; background-color: #eaf6fb; padding: 1rem; border-radius: 0.5rem;'>
+    <div style='text-align: center; background-color: #eaf6fb; padding: 1rem; border-radius: 0.5rem;; color: black;'>
         <b>In this page, we provide a tool to observe how evolve the baby names over the years with impact of gender.</b><br><br>
         <i>Mixed name means a name used for both girls and boys.</i>
     </div>
