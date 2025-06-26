@@ -24,14 +24,21 @@ st.set_page_config(
     initial_sidebar_state="expanded")
 
 st.title("Evolution of Baby Names by Gender over the years")
-st.info(
-    """
-    In this page, we provide a tool to observe how evolve the baby names ever the years with impact of gender. So we define
+# st.info(
+#     """
+#     In this page, we provide a tool to observe how evolve the baby names ever the years with impact of gender. So we define
 
-        - mixed name means a name that was used on baby girl and baby boy
-
-        - mixed boys or mixed girls mean a boy name is used like name for baby girls.
+#         Mixed name means a name used for both girls and boys.
+#     """
+# )
+st.markdown(
     """
+    <div style='text-align: center; background-color: #eaf6fb; padding: 1rem; border-radius: 0.5rem;'>
+        <b>In this page, we provide a tool to observe how evolve the baby names over the years with impact of gender.</b><br><br>
+        <i>Mixed name means a name used for both girls and boys.</i>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 # Charger les données
@@ -53,31 +60,19 @@ grouped_cleaned_df = new_cleaned_df.groupby(['annais', 'sexe'])['nombre'].sum().
 
 # get all years
 all_years = Dataset(cleaned_df).get_years()
-
-# show graph
-
-# add radio box for 3 options: B, G or both
-# option = st.radio(label="",
-#          key='gender_selection',
-#          options=['Both', 'Boys', 'Girls'],
-#          horizontal=True)
-
-# cleaned_df_mixed = Dataset(cleaned_df).get_global_gender_counts()
+#----------------------------------------------------------------------
+# graph 1: Area chart of Gender names & mixed names
 source = grouped_cleaned_df.copy()
-
-# if option == 'Boys':
-#     # cleaned_df_mixed = cleaned_df_mixed[['annais', 'boys', 'mixed']]
-#     source = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([1,3])] # where data have 4 classes: B, G, Mixed B, Mixed D
-# elif option == 'Girls':
-#     # cleaned_df_mixed = cleaned_df_mixed[['annais', 'girls', 'mixed']]
-#     source = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([2,4])]
-
-# chart = line_chart_mixed_names(cleaned_df_mixed, all_years[0], all_years[-1])
+# Map sexe to labels
+mapping = {1: 'Boys', 2: 'Girls', 3: 'Boys mixed names', 4: 'Girls mixed names'}
+color_scale = alt.Scale(
+    domain=['Boys', 'Girls', 'Boys mixed names', 'Girls mixed names'],
+    range=['#1f77b4', "#ef7c16", "#5c92b8",  "#e3a168"]  # Choisis tes couleurs ici
+)
+# Girls (sexe = 2 and 4 in dataframe)
 sourceG = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([2, 4])].copy()
-mapping = {1: 'A-Boys', 2: 'B-Girls', 3: 'C-Boys mixed names', 4: 'D-Girls mixed names'}
 sourceG['sexe_label'] = sourceG['sexe'].map(mapping)
-
-# Garçons (sexe 1 et 3)
+# Boys (sexe = 1 and 3 in dataframe)
 sourceB = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([1, 3])].copy()
 sourceB['sexe_label'] = sourceB['sexe'].map(mapping)
 
@@ -85,31 +80,40 @@ sourceB['sexe_label'] = sourceB['sexe'].map(mapping)
 areaB = alt.Chart(sourceB).mark_area().encode(
     x=alt.X("annais:T", title='Years').axis(format="%Y", orient="top", grid=True),
     y=alt.Y("nombre:Q", title="Boys"),
-    color=alt.Color("sexe_label:N", title='Label'),
+    color=alt.Color("sexe_label:N", title='Label', scale=color_scale),
 ).properties(height=200, width=800)
 
 # Graphique pour filles (en bas, inversé)
 areaG = alt.Chart(sourceG).mark_area().encode(
     x=alt.X("annais:T", title='Years').axis(format="%Y", grid=True),
     y=alt.Y("nombre:Q", scale=alt.Scale(reverse=True), title="Girls"),
-    color=alt.Color("sexe_label:N", title='Label'),
+    color=alt.Color("sexe_label:N", title='Label',scale=color_scale),
 ).properties(height=200, width=800)
 
 # Empiler verticalement avec axe X partagé
 chart = alt.vconcat(areaB, areaG).resolve_scale(x='shared').configure_concat(spacing=0)
 st.altair_chart(chart, use_container_width=True)
 
-st.subheader("Top 10 mixed names over the years")
+#----------------------------------------------------------------------
+st.markdown(
+    "<h3 style='text-align: center;'>Evolution of a mixte name over the years</h3>",
+    unsafe_allow_html=True
+)
 mixed_dt = Dataset(cleaned_df).get_dataset_by_gender(sexe='M')
 mixed_dt = mixed_dt.groupby('preusuel')['nombre'].sum().reset_index(name='value')
-pills_elements = pills("",
+pills_elements = pills("TOP 10 MIXED NAMES",
                 mixed_dt.sort_values(by='value', ascending=False)['preusuel'].tolist()[:10],
                 ["👶🏼"]*10,
                 index=None,)
-st.write("Click a name of list and see how it changes")
+st.markdown(f"""
+        <div style='text-align: right; font-style: italic; color: #666;'>
+        Click on a name from top 10 to learn more""",
+        unsafe_allow_html=True)
 
-st.subheader('Focus on a name')
-col1, col2 = st.columns([1, 2])
+
+#----------------------------------------------------------------------
+
+col1, spacer, col2 = st.columns([1, 0.2, 2])
 with col1:
     name_input = st.text_input("Type a name or choose one of list above:", "")
     if name_input:
@@ -130,14 +134,15 @@ with col1:
         """,
         unsafe_allow_html=True
     )
-
-with col2:
+#----------------------------------------------------------------------
+# graph 2
+with col2: # plot function is called from preprocessing.py
     if name_selected:
         # plot chart all dataset
         # chart_selected_name = plot_stacked_area_chart(df_all_mixed_names, start_year, end_year, name_selected)
         st.markdown(
             f"""
-            <div style='text-align: center; font-style: bold; color: #666;'>
+            <div style='text-align: center; font-style: bold;'>
             {'Evolution of '+ name_selected.upper() + ' between ' + str(start_year) + ' and ' + str(end_year)}</div>
             """,
             unsafe_allow_html=True
