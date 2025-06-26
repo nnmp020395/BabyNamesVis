@@ -33,13 +33,17 @@ st.title("Evolution of Baby Names by Gender over the years")
 # )
 st.markdown(
     """
-    <div style='text-align: center; background-color: #eaf6fb; padding: 1rem; border-radius: 0.5rem;; color: black;'>
-        <b>In this page, we provide a tool to observe how evolve the baby names over the years with impact of gender.</b><br><br>
-        <i>Mixed name means a name used for both girls and boys.</i>
+    <div style='text-align: center; background-color: #eaf6fb; padding: 1rem; border-radius: 0.5rem; color: black;'>
+        <b>On this page, we provide a tool to observe how baby names have evolved over the years with respect to gender.</b><br><br>
+        <i>
+        – Mixed name: A name given to both girls and boys.<br>
+        – “Mixed boys” / “Mixed girls”: Mixed names attributed to boys or girls, respectively.
+        </i>
     </div>
     """,
     unsafe_allow_html=True
 )
+
 
 # Charger les données
 df = pd.read_csv(DATA_FILE, sep=';')
@@ -80,23 +84,29 @@ sourceB['sexe_label'] = sourceB['sexe'].map(mapping)
 areaB = alt.Chart(sourceB).mark_area().encode(
     x=alt.X("annais:T", title='Years').axis(format="%Y", orient="top", grid=True),
     y=alt.Y("nombre:Q", title="Boys"),
-    color=alt.Color("sexe_label:N", title='Label', scale=color_scale),
+    color=alt.Color("sexe_label:N", title='Label*', scale=color_scale),
 ).properties(height=200, width=800)
 
 # Graphique pour filles (en bas, inversé)
 areaG = alt.Chart(sourceG).mark_area().encode(
     x=alt.X("annais:T", title='Years').axis(format="%Y", grid=True),
     y=alt.Y("nombre:Q", scale=alt.Scale(reverse=True), title="Girls"),
-    color=alt.Color("sexe_label:N", title='Label',scale=color_scale),
+    color=alt.Color("sexe_label:N", title='Label*',scale=color_scale),
 ).properties(height=200, width=800)
 
 # Empiler verticalement avec axe X partagé
 chart = alt.vconcat(areaB, areaG).resolve_scale(x='shared').configure_concat(spacing=0)
 st.altair_chart(chart, use_container_width=True)
 
+st.info(
+    "*The sum of the two blue areas represents the total number of boys. "
+    "The same applies to girls and the orange areas."
+)
+
+
 #----------------------------------------------------------------------
 st.markdown(
-    "<h3 style='text-align: center;'>Evolution of a mixte name over the years</h3>",
+    "<h3 style='text-align: center;'>Evolution of a mixed name over the years</h3>",
     unsafe_allow_html=True
 )
 mixed_dt = Dataset(cleaned_df).get_dataset_by_gender(sexe='M')
