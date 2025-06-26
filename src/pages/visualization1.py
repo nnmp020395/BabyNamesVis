@@ -109,31 +109,24 @@ if prenom_cible:
         alt.datum.annais == selected_year
     )
 
-
-    # Label at the top of the line
-    # vertical_label = alt.Chart(df_target.drop_duplicates(subset=['annais'])).mark_text(
-    #     align='center',
-    #     dy=0,  # Adjust vertically (negative = move up)
-    #     color='red',
-    #     fontSize=12,
-    #     fontWeight='bold',
-    #     background='white'
-    # ).encode(
-    #     x='annais:O',
-    #     y=alt.value(3),
-    #     text=alt.Text('year_label:N')
-    # ).transform_calculate(
-    #     year_label='toString(datum.annais)'
-    # ).transform_filter(
-    #     alt.datum.annais == selected_year
-    # )
-
-
-
-    #vertical_marker = vertical_line + vertical_label
+    vertical_label = (
+        alt.Chart(pd.DataFrame({'annais': [selected_year], 'label': [str(selected_year)]}))
+        .mark_text(
+            align='left',
+            baseline='top',
+            dy=-135,
+            fontSize=12,
+            fontWeight='bold',
+            color='red'
+        )
+        .encode(
+            x='annais:O',
+            text='label'
+        )
+    )
 
     combined_chart = alt.layer(
-        line_rank, line_births, vertical_line # vertical_marker
+        line_rank, line_births, vertical_line, vertical_label 
     ).resolve_scale(
         y='independent'
     ).properties(
@@ -258,7 +251,7 @@ else:
     line_labels = alt.Chart(label_data).mark_text(
         align='center',
         baseline='bottom',
-        dx=5, 
+        dx=25, 
         dy=-5,  
         fontWeight='bold',
         fontSize=12
@@ -277,8 +270,24 @@ else:
         .encode(x='annais:O')
     )
 
+    vertical_label = (
+        alt.Chart(pd.DataFrame({'annais': [selected_year], 'label': [str(selected_year)]}))
+        .mark_text(
+            align='left',
+            baseline='top',
+            dy=-135,
+            fontSize=12,
+            fontWeight='bold',
+            color='red'
+        )
+        .encode(
+            x='annais:O',
+            text='label'
+        )
+    )
+
     combined_chart = alt.layer(
-        rank_chart, vertical_line, line_labels
+        rank_chart, vertical_line, line_labels, vertical_label
     ).properties(
         height=450,
         width=850,
