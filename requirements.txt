@@ -1,4 +1,5 @@
 streamlit
+streamlit-pills
 pandas 
 bar_chart_race 
 matplotlib
