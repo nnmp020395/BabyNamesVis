@@ -49,14 +49,72 @@ def load_and_clean_data(csv_path: str) -> pd.DataFrame:
 # Visualisation 2
 ###############################################################################
 
+import pandas as pd
 
+def clean_and_enrich_baby_names(csv_path, mapping_path):
+    """
+    Load, clean, and enrich the raw baby names dataset with regional information.
+    
+    This function processes the French baby names dataset by cleaning invalid entries,
+    standardizing department codes, and adding regional information through mapping.
+    Special handling is implemented for Corsica (department code '20').
 
+    Parameters:
+        csv_path (str): Path to the raw baby names CSV file
+        mapping_path (str): Path to the CSV mapping departments to regions
+
+    Returns:
+        pd.DataFrame: Cleaned and enriched DataFrame with region names added
+    """
+    
+    # Load the raw dataset
+    df = pd.read_csv(csv_path, sep=';')
+
+    # Remove rows with missing or invalid values
+    df = df.dropna()
+    df = df[(df['annais'] != 'XXXX') & (df['dpt'] != 'XX')]
+
+    # Remove rows with rare names (aggregated category)
+    df = df[df.preusuel != '_PRENOMS_RARES'].copy()
+
+    # Convert columns to appropriate data types
+    df['annais'] = df['annais'].astype(int)
+    df['sexe'] = df['sexe'].astype(int)
+    df['nombre'] = df['nombre'].astype(int)
+    df['dpt'] = df['dpt'].astype(str).str.zfill(2)
+
+    # Load and format the department-to-region mapping
+    mapping = pd.read_csv(mapping_path)
+    mapping['num_dep'] = mapping['num_dep'].astype(str)
+    
+    # Handle special case: Corsica department code mapping
+    # Dataset uses '20' for Corsica, but mapping uses '2A' and '2B'
+    # Map both 2A and 2B to department code '20' for consistency
+    corsica_mapping = mapping[mapping['num_dep'].isin(['2A', '2B'])].copy()
+    if not corsica_mapping.empty:
+        corsica_unified = pd.DataFrame({
+            'num_dep': ['20'],
+            'dep_name': ['Corse'],
+            'region_name': ['Corse']
+        })
+        mapping = pd.concat([mapping[~mapping['num_dep'].isin(['2A', '2B'])], corsica_unified], 
+                           ignore_index=True)
+    
+    # Ensure department codes in mapping are zero-padded
+    mapping['num_dep'] = mapping['num_dep'].apply(lambda x: x.zfill(2) if x.isdigit() else x)
+
+    # Merge regional information into the dataset
+    df = df.merge(mapping[['num_dep', 'region_name']], left_on='dpt', right_on='num_dep', how='left')
+    df = df.drop(columns=['num_dep'])
+
+    return df
 
 
 
 ###############################################################################
 # Visualisation 3
 ###############################################################################
+
 class Dataset:
     def __init__(self, df):
         self.df = df
@@ -252,14 +310,9 @@ def heatmap_line_percent(data_base, data):
     Graph 2 VIS 3
     """
     x = data['annais'].unique()
-    """
-    Graph 2 VIS 3
-    """
-    x = data['annais'].unique()
     y = np.arange(101)
     xx, yy = np.meshgrid(x, y, indexing='ij')  # indexing='ij' pour avoir x en lignes, y en colonnes
     # Créer un compteur croissant pour value
-    value = np.array([np.arange(101)] * data['annais'].unique().shape[0])
     value = np.array([np.arange(101)] * data['annais'].unique().shape[0])
     df = pd.DataFrame({
         'x': xx.flatten(),
@@ -272,11 +325,9 @@ def heatmap_line_percent(data_base, data):
         x=alt.X('x:T', title='Years').axis(format="%Y"),
         y=alt.Y('y:O',
                 title='Percentage of names used as baby girl names',
-                title='Percentage of names used as baby girl names',
                 scale=alt.Scale(reverse=True),
                 axis=alt.Axis(values=list(range(0, 101, 10))),
         ),
-        color=alt.Color('value:Q', scale=alt.Scale(scheme='oranges'), title='Pourcents (%)')
         color=alt.Color('value:Q', scale=alt.Scale(scheme='oranges'), title='Pourcents (%)')
     ).properties(
         width=600,
@@ -289,9 +340,7 @@ def heatmap_line_percent(data_base, data):
 
     # superposer line sur le heatmap, choisir seulement la ligne des noms mixtes portés par une fille
     source = data[data['sexe'] == data['sexe'].unique()[-1]]
-    source = data[data['sexe'] == data['sexe'].unique()[-1]]
     line = alt.Chart(source).mark_line().encode(
-        x=alt.X("annais:T", title="Years").axis(format="%Y"),
         x=alt.X("annais:T", title="Years").axis(format="%Y"),
         y=alt.Y("pct:Q").axis(None),
         color=alt.Color("sexe:N",
