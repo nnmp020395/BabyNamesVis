@@ -27,6 +27,9 @@ st.title("Evolution of Baby Names by Gender over the years")
 # st.info(
 #     """
 #     In this page, we provide a tool to observe how evolve the baby names ever the years with impact of gender. So we define
+# st.info(
+#     """
+#     In this page, we provide a tool to observe how evolve the baby names ever the years with impact of gender. So we define
 
 #         Mixed name means a name used for both girls and boys.
 #     """
@@ -62,6 +65,8 @@ grouped_cleaned_df = new_cleaned_df.groupby(['annais', 'sexe'])['nombre'].sum().
 all_years = Dataset(cleaned_df).get_years()
 #----------------------------------------------------------------------
 # graph 1: Area chart of Gender names & mixed names
+#----------------------------------------------------------------------
+# graph 1: Area chart of Gender names & mixed names
 source = grouped_cleaned_df.copy()
 # Map sexe to labels
 mapping = {1: 'Boys', 2: 'Girls', 3: 'Boys mixed names', 4: 'Girls mixed names'}
@@ -78,6 +83,7 @@ legends = {
 # Girls (sexe = 2 and 4 in dataframe)
 sourceG = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([2, 4])].copy()
 sourceG['sexe_label'] = sourceG['sexe'].map(mapping)
+# Boys (sexe = 1 and 3 in dataframe)
 # Boys (sexe = 1 and 3 in dataframe)
 sourceB = grouped_cleaned_df[grouped_cleaned_df['sexe'].isin([1, 3])].copy()
 sourceB['sexe_label'] = sourceB['sexe'].map(mapping)
@@ -177,6 +183,7 @@ with col2: # plot function is called from preprocessing.py
         # chart_selected_name = plot_stacked_area_chart(df_all_mixed_names, start_year, end_year, name_selected)
         st.markdown(
             f"""
+            <div style='text-align: center; font-style: bold;'>
             <div style='text-align: center; font-style: bold;'>
             {'Evolution of '+ name_selected.upper() + ' between ' + str(start_year) + ' and ' + str(end_year)}</div>
             """,
