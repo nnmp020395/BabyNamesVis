@@ -408,11 +408,14 @@ def multi_line_tooltip_by_gender(data):
     return area
 
 def heatmap_line_percent(data_base, data):
-    x = data_base['annais'].unique()
+    """
+    Graph 2 VIS 3
+    """
+    x = data['annais'].unique()
     y = np.arange(101)
     xx, yy = np.meshgrid(x, y, indexing='ij')  # indexing='ij' pour avoir x en lignes, y en colonnes
     # Créer un compteur croissant pour value
-    value = np.array([np.arange(101)] * data_base['annais'].unique().shape[0])
+    value = np.array([np.arange(101)] * data['annais'].unique().shape[0])
     df = pd.DataFrame({
         'x': xx.flatten(),
         'y': yy.flatten(),
@@ -423,17 +426,11 @@ def heatmap_line_percent(data_base, data):
     heatmap_base = alt.Chart(df).mark_rect().encode(
         x=alt.X('x:T', title='Years').axis(format="%Y"),
         y=alt.Y('y:O',
-                title='Pourcents',
+                title='Percentage of names used as baby girl names',
                 scale=alt.Scale(reverse=True),
                 axis=alt.Axis(values=list(range(0, 101, 10))),
         ),
-        color=alt.Color('value:Q', 
-                        scale=alt.Scale(
-                            scheme='oranges'), 
-                            #domain=[0, 50, 100],      
-                            #range=['bleu', 'white', 'red']
-                        #),
-                        title='Pourcents (%)')
+        color=alt.Color('value:Q', scale=alt.Scale(scheme='oranges'), title='Pourcents (%)')
     ).properties(
         width=600,
         height=500,
@@ -441,9 +438,9 @@ def heatmap_line_percent(data_base, data):
     )
 
     # superposer line sur le heatmap, choisir seulement la ligne des noms mixtes portés par une fille
-    source = data[data['sexe'] == data['sexe'].unique()[1]]
+    source = data[data['sexe'] == data['sexe'].unique()[-1]]
     line = alt.Chart(source).mark_line().encode(
-        x=alt.X("annais:T"),
+        x=alt.X("annais:T", title="Years").axis(format="%Y"),
         y=alt.Y("pct:Q").axis(None),
         color=alt.Color("sexe:N",
                         title="Sexe",
