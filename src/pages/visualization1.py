@@ -86,15 +86,21 @@ if prenom_cible:
     st.altair_chart(chart, use_container_width=True)
 
     line_rank = alt.Chart(df_target).mark_line(color='orange').encode(
-        x=alt.Tooltip('annais:O', title='Year'),
+        x=alt.X('annais:O', title='Year'),
         y=alt.Y('rang:Q', scale=alt.Scale(reverse=True), title='Rank'),
-        tooltip=['annais', alt.Tooltip('rang:Q', title='Rank')]
+        tooltip=[
+            alt.Tooltip('annais:O', title='Year'),
+            alt.Tooltip('rang:Q', title='Rank')
+        ]
     )
 
     line_births = alt.Chart(df_target).mark_line(color='teal').encode(
-        x=alt.Tooltip('annais:O', title='Year'),
-        y=alt.Tooltip('nombre:Q', title='Number'),
-        tooltip=['annais', alt.Tooltip('nombre:Q', title='Number of births')]
+        x=alt.X('annais:O', title='Year'),
+        y=alt.Y('nombre:Q', title='Number'),
+        tooltip=[
+            alt.Tooltip('annais:O', title='Year'),
+            alt.Tooltip('nombre:Q', title='Number of births')
+        ]
     )
 
     vertical_line = alt.Chart(df_target).mark_rule(color='red', strokeDash=[5, 5]).encode(
@@ -103,8 +109,31 @@ if prenom_cible:
         alt.datum.annais == selected_year
     )
 
+
+    # Label at the top of the line
+    # vertical_label = alt.Chart(df_target.drop_duplicates(subset=['annais'])).mark_text(
+    #     align='center',
+    #     dy=0,  # Adjust vertically (negative = move up)
+    #     color='red',
+    #     fontSize=12,
+    #     fontWeight='bold',
+    #     background='white'
+    # ).encode(
+    #     x='annais:O',
+    #     y=alt.value(3),
+    #     text=alt.Text('year_label:N')
+    # ).transform_calculate(
+    #     year_label='toString(datum.annais)'
+    # ).transform_filter(
+    #     alt.datum.annais == selected_year
+    # )
+
+
+
+    #vertical_marker = vertical_line + vertical_label
+
     combined_chart = alt.layer(
-        line_rank, line_births, vertical_line
+        line_rank, line_births, vertical_line # vertical_marker
     ).resolve_scale(
         y='independent'
     ).properties(
@@ -158,6 +187,7 @@ else:
         .encode(
             x=alt.X('nombre:Q', title='Number of births'),
             y=alt.Y('rang_label:N', sort='-x', title=chart_title),
+            #y=alt.Y('rang_label:Q', scale=alt.Scale(domain=[1, 10]), sort='-x', title=chart_title),
             tooltip=[
                 alt.Tooltip('rang:Q', title='Rank'),
                 alt.Tooltip('preusuel:N', title='Name'),
@@ -212,7 +242,7 @@ else:
         .mark_line()
         .encode(
             x=alt.X('annais:O', title='Year'),
-            y=alt.Y('rang:Q', scale=alt.Scale(reverse=True)),
+            y=alt.Y('rang:Q', scale=alt.Scale(reverse=True), title='Rank'), 
             color='preusuel:N',
             tooltip=[
                 alt.Tooltip('rang:Q', title='Rank'),
@@ -229,7 +259,9 @@ else:
         align='center',
         baseline='bottom',
         dx=5, 
-        dy=-5  
+        dy=-5,  
+        fontWeight='bold',
+        fontSize=12
     ).encode(
         x=alt.Tooltip('annais:O', title='Year'),
         y=alt.Tooltip('rang:Q', title='Rank'),
@@ -264,7 +296,7 @@ else:
         clip=False
     ).interactive()
 
-    st.subheader(f"📊 Global evolution of Top 10 {'MOST' if not show_last_10 else 'LEAST'} popular names in {selected_year}")
+    st.subheader(f"📊 Global evolution of Top 10 {'MOST' if not show_last_10 else 'LEAST'} popular names around {selected_year}")
 
 
     st.altair_chart(combined_chart, use_container_width=True)
