@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 import geopandas as gpd
 from wordcloud import WordCloud
 import numpy as np
@@ -50,7 +52,7 @@ def get_region_shapes(geojson_path):
     }
     return shapes
 
-def get_top_names_by_region(df, top_n=50):
+def get_top_names_by_region_viz(df, top_n=50):
     """
     Return the top N names by frequency for each region.
 
@@ -184,65 +186,92 @@ def render_choropleth_matplotlib(df_with_proportions, regions_geojson_path, sele
 
         fig, ax = plt.subplots(figsize=(12, 10))
 
-        gdf_merged.plot(
+        
+        gdf_no_corse = gdf_merged[gdf_merged['region_name'] != 'Corse']
+        gdf_no_corse.plot(
             column='avg_proportion',
-            cmap='YlOrBr',
+            cmap='Blues',
             linewidth=0.8,
             ax=ax,
-            edgecolor='black',
-            legend=True,
-            legend_kwds={
-                'label': f'Average proportion (%) of name "{selected_name}"',
-                'orientation': "vertical",
-                'shrink': 0.6,
-                'aspect': 20,
-                'pad': 0.1
-            }
+            edgecolor='darkgray',  
+            legend=False  
         )
+        
+        gdf_corse = gdf_merged[gdf_merged['region_name'] == 'Corse']
+        if not gdf_corse.empty:
+            gdf_corse.plot(
+                ax=ax,
+                color='lightgray',
+                linewidth=0.8,
+                edgecolor='darkgray'  
+            )
 
-        # Add region labels using representative points (inside geometry)
+        from matplotlib import cm
+        from matplotlib.colors import Normalize
+        
+        vmin = gdf_no_corse['avg_proportion'].min()
+        vmax = gdf_no_corse['avg_proportion'].max()
+        
+        if vmax == 0:
+            vmax = 0.1
+        
+        norm = Normalize(vmin=vmin, vmax=vmax)
+        sm = plt.cm.ScalarMappable(norm=norm, cmap='Blues')  
+        sm.set_array([])
+        
+        cbar = fig.colorbar(sm, ax=ax, shrink=0.6, aspect=20, pad=0.1)
+        cbar.set_label(f'Average proportion (%) of name "{selected_name}"', rotation=270, labelpad=20)
+
+        region_offsets = {
+            'Nouvelle-Aquitaine': (0, 0),    
+            'Provence-Alpes-Côte d\'Azur': (0, 0),   
+            'Auvergne-Rhône-Alpes': (0, 0),
+            'Occitanie': (0, 0),
+            'Île-de-France': (0, 0),
+            'Grand Est': (0, 0),
+            'Hauts-de-France': (0, 0),
+            'Normandie': (0, 0),
+            'Bretagne': (0, 0),                  
+            'Pays de la Loire': (0, 0),
+            'Centre-Val de Loire': (0, 0),
+            'Bourgogne-Franche-Comté': (0, 0),
+            'Corse': (0, 0)
+        }
+
         for idx, row in gdf_merged.iterrows():
+            region_name = row['region_name']
+            
             label_point = row['geometry'].representative_point()
+            
+            offset_x, offset_y = region_offsets.get(region_name, (0, 0))
+            final_x = label_point.x + offset_x
+            final_y = label_point.y + offset_y
+            
+            if region_name == 'Provence-Alpes-Côte d\'Azur':
+                text = 'Provence-Alpes-\nCôte d\'Azur'
+            else:
+                text = region_name
+                
             ax.text(
-                label_point.x, label_point.y,
-                row['region_name'],
+                final_x, final_y,
+                text,
                 horizontalalignment='center',
                 verticalalignment='center',
-                fontsize=8,
+                fontsize=9,
                 fontweight='bold',
-                color='gray',  # <- gray text
-                zorder=20
+                color='darkblue',
+                zorder=20,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7)
             )
 
         ax.set_title(
-            f"""Geographical distribution of name "{selected_name}"
-        Period: {start_year} - {end_year}""", 
+            f'Geographic distribution of name "{selected_name}"\nPeriod: {start_year} - {end_year}', 
             fontsize=16, 
             fontweight='bold',
             pad=20
         )
 
-        # Compute top 3 regions
-        top_regions = (
-            proportion_data[proportion_data['avg_proportion'] > 0]
-            .sort_values('avg_proportion', ascending=False)
-            .head(3)
-        )
-        top_regions_str = "\n".join([
-            f"{rank+1}. {row.region_name.strip()} ({row.avg_proportion:.2f}%)"
-            for rank, row in enumerate(top_regions.itertuples(index=False))
-        ])
-
-
-        stats_text = f"""Statistics:
-• Max proportion: {proportion_data['avg_proportion'].max():.2f}%
-• Top 3 most popular regions:
-{top_regions_str}"""
-
-        ax.text(0.02, 0.98, stats_text, transform=ax.transAxes, fontsize=10,
-                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
-
-        ax.axis('off')  # <- remove axes completely
+        ax.axis('off')
         plt.tight_layout()
         return fig
 
