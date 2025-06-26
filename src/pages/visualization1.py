@@ -65,6 +65,13 @@ if prenom_cible:
     df_window = df_grouped.groupby('annais', group_keys=False).apply(extract_window).reset_index(drop=True)
     df_window['rang_label'] = df_window['rang'].astype(str) + '. ' + df_window['preusuel']
 
+    # Create separate DataFrames for rank and number of births
+    df_rank = df_target.copy()
+    df_rank['type'] = 'Rank'
+
+    df_births = df_target.copy()
+    df_births['type'] = 'Number of births'
+
     chart = (
         alt.Chart(df_window)
         .mark_bar()
@@ -85,22 +92,32 @@ if prenom_cible:
 
     st.altair_chart(chart, use_container_width=True)
 
-    line_rank = alt.Chart(df_target).mark_line(color='orange').encode(
-        x=alt.X('annais:O', title='Year'),
-        y=alt.Y('rang:Q', scale=alt.Scale(reverse=True), title='Rank'),
-        tooltip=[
-            alt.Tooltip('annais:O', title='Year'),
-            alt.Tooltip('rang:Q', title='Rank')
-        ]
+    line_rank = (
+        alt.Chart(df_rank)
+        .mark_line()
+        .encode(
+            x=alt.X('annais:O', title='Year'),
+            y=alt.Y('rang:Q', scale=alt.Scale(reverse=True), title='Rank'),
+            color=alt.Color('type:N', scale=alt.Scale(domain=['Rank', 'Number of births'], range=['orange', 'teal'])),
+            tooltip=[
+                alt.Tooltip('annais:O', title='Year'),
+                alt.Tooltip('rang:Q', title='Rank'),
+            ]
+        )
     )
 
-    line_births = alt.Chart(df_target).mark_line(color='teal').encode(
-        x=alt.X('annais:O', title='Year'),
-        y=alt.Y('nombre:Q', title='Number'),
-        tooltip=[
-            alt.Tooltip('annais:O', title='Year'),
-            alt.Tooltip('nombre:Q', title='Number of births')
-        ]
+    line_births = (
+        alt.Chart(df_births)
+        .mark_line()
+        .encode(
+            x=alt.X('annais:O', title='Year'),
+            y=alt.Y('nombre:Q', title='Number'),
+            color=alt.Color('type:N', title='Legend:'),
+            tooltip=[
+                alt.Tooltip('annais:O', title='Year'),
+                alt.Tooltip('nombre:Q', title='Number of births')
+            ]
+        )
     )
 
     vertical_line = alt.Chart(df_target).mark_rule(color='red', strokeDash=[5, 5]).encode(
@@ -259,8 +276,8 @@ else:
         x=alt.Tooltip('annais:O', title='Year'),
         y=alt.Tooltip('rang:Q', title='Rank'),
         text=alt.Tooltip('preusuel:N', title='Name'),
-        color='preusuel:N'
-    )
+        color=alt.Color('preusuel:N', title='Names')
+        )
 
 
     # Vertical line for selected year
