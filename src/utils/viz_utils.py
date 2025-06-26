@@ -220,7 +220,7 @@ def render_choropleth_matplotlib(df_with_proportions, regions_geojson_path, sele
         sm.set_array([])
         
         cbar = fig.colorbar(sm, ax=ax, shrink=0.6, aspect=20, pad=0.1)
-        cbar.set_label(f'Average proportion (%) of name "{selected_name}"', rotation=270, labelpad=20)
+        cbar.set_label(f'Average proportion (%) of name by region "{selected_name}"', rotation=270, labelpad=20)
 
         region_offsets = {
             'Nouvelle-Aquitaine': (0, 0),    

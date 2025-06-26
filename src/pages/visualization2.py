@@ -21,6 +21,19 @@ from utils.viz_utils import (
 st.set_page_config(layout="wide", page_title="Baby Names France", page_icon="🗺️")
 st.title("🗺️ Baby Names by Region in France")
 
+# Move "About" section to the beginning
+st.markdown("### 📊 About this visualization")
+st.markdown("""
+This interactive dashboard explores baby name trends across French regions using:
+- **WordCloud Map**: Shows the most popular names in each region
+- **Regional Analysis**: Detailed view of top names per region
+- **Choropleth Map**: Geographic distribution of individual names
+
+Data covers French baby names by department and year, aggregated by region.
+""")
+
+st.markdown("---")
+
 geojson_path = os.path.join(project_root, "data", "processed", "regions.geojson")
 csv_path = os.path.join(project_root, "data", "processed", "names_by_region.csv.gz")
 csv_proportions_path = os.path.join(project_root, "data", "processed", "names_by_regions_proportion.csv.gz")
@@ -89,7 +102,7 @@ def render_wordcloud_map(df_filtered_years, geojson_path, _regions_gdf):
             aspect="auto"
         )
 
-    ax.set_title(f"Top 50 Names by Region ({start_year} - {end_year})", fontsize=18)
+    ax.set_title(f"Top Names by Region ({start_year} - {end_year})", fontsize=18)
     ax.axis("off")
     plt.tight_layout()
     return fig
@@ -133,7 +146,7 @@ with col1:
 
     if all_names:
         selected_name = st.selectbox(
-            "Choose a name to visualize:",
+            "Choose a name to visualize its popularity across regions:",
             options=all_names,
             index=0,
             help="Type the first letters to filter",
@@ -169,7 +182,7 @@ with col1:
                 .head(3)
             )
 
-            st.markdown("**Top 3 most popular regions:**")
+            st.markdown(f"**Top 3 regions with the highest proportion of babies named {selected_name} between {start_year} and {end_year}:**")
             for i, (region, proportion) in enumerate(top_regions_metro.items(), 1):
                 st.write(f"{i}. {region} ({proportion:.2f}%)")
             
@@ -239,14 +252,3 @@ with col2:
     bar_chart_fig = render_top_names_bar_chart(df_filtered, selected_region, start_year, end_year)
     if bar_chart_fig:
         st.pyplot(bar_chart_fig, use_container_width=True)
-
-st.markdown("---")
-st.markdown("### 📊 About this visualization")
-st.markdown("""
-This interactive dashboard explores baby name trends across French regions using:
-- **WordCloud Map**: Shows the most popular names in each region
-- **Regional Analysis**: Detailed view of top names per region
-- **Choropleth Map**: Geographic distribution of individual names
-
-Data covers French baby names by department and year, aggregated by region.
-""")
