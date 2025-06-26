@@ -49,166 +49,7 @@ def load_and_clean_data(csv_path: str) -> pd.DataFrame:
 # Visualisation 2
 ###############################################################################
 
-import pandas as pd
 
-def clean_and_enrich_baby_names(csv_path, mapping_path):
-    """
-    Load, clean, and enrich the raw baby names dataset with regional information.
-    
-    This function processes the French baby names dataset by cleaning invalid entries,
-    standardizing department codes, and adding regional information through mapping.
-    Special handling is implemented for Corsica (department code '20').
-
-    Parameters:
-        csv_path (str): Path to the raw baby names CSV file
-        mapping_path (str): Path to the CSV mapping departments to regions
-
-    Returns:
-        pd.DataFrame: Cleaned and enriched DataFrame with region names added
-    """
-    
-    # Load the raw dataset
-    df = pd.read_csv(csv_path, sep=';')
-
-    # Remove rows with missing or invalid values
-    df = df.dropna()
-    df = df[(df['annais'] != 'XXXX') & (df['dpt'] != 'XX')]
-
-    # Remove rows with rare names (aggregated category)
-    df = df[df.preusuel != '_PRENOMS_RARES'].copy()
-
-    # Convert columns to appropriate data types
-    df['annais'] = df['annais'].astype(int)
-    df['sexe'] = df['sexe'].astype(int)
-    df['nombre'] = df['nombre'].astype(int)
-    df['dpt'] = df['dpt'].astype(str).str.zfill(2)
-
-    # Load and format the department-to-region mapping
-    mapping = pd.read_csv(mapping_path)
-    mapping['num_dep'] = mapping['num_dep'].astype(str)
-    
-    # Handle special case: Corsica department code mapping
-    # Dataset uses '20' for Corsica, but mapping uses '2A' and '2B'
-    # Map both 2A and 2B to department code '20' for consistency
-    corsica_mapping = mapping[mapping['num_dep'].isin(['2A', '2B'])].copy()
-    if not corsica_mapping.empty:
-        corsica_unified = pd.DataFrame({
-            'num_dep': ['20'],
-            'dep_name': ['Corse'],
-            'region_name': ['Corse']
-        })
-        mapping = pd.concat([mapping[~mapping['num_dep'].isin(['2A', '2B'])], corsica_unified], 
-                           ignore_index=True)
-    
-    # Ensure department codes in mapping are zero-padded
-    mapping['num_dep'] = mapping['num_dep'].apply(lambda x: x.zfill(2) if x.isdigit() else x)
-
-    # Merge regional information into the dataset
-    df = df.merge(mapping[['num_dep', 'region_name']], left_on='dpt', right_on='num_dep', how='left')
-    df = df.drop(columns=['num_dep'])
-
-    return df
-
-
-def get_top_names_by_region(df, top_n=50):
-    """
-    Get the top N most popular names for each region.
-    
-    Groups the dataset by region and name, aggregates birth counts,
-    and returns the most popular names per region.
-
-    Parameters:
-        df (pd.DataFrame): DataFrame containing baby names data with region information
-        top_n (int): Number of top names to return per region (default: 50)
-
-    Returns:
-        pd.DataFrame: DataFrame with top N names per region, sorted by popularity
-    """
-    
-    grouped = (
-        df.groupby(['region_name', 'preusuel'])['nombre']
-        .sum()
-        .reset_index()
-    )
-    
-    top_names = (
-        grouped.sort_values(['region_name', 'nombre'], ascending=[True, False])
-        .groupby('region_name')
-        .head(top_n)
-    )
-    
-    return top_names
-
-
-def add_proportion_column(df):
-    """
-    Add a proportion column calculating the percentage of each name within its region-year.
-    
-    For each row, calculates what percentage this specific name represents
-    of all births in the same region and year.
-
-    Parameters:
-        df (pd.DataFrame): DataFrame containing baby names data with columns:
-                          ['sexe', 'preusuel', 'annais', 'dpt', 'nombre', 'region_name']
-
-    Returns:
-        pd.DataFrame: Original DataFrame with added 'proportion_birth' column (percentage)
-    """
-    
-    # Calculate total births per region per year
-    total_births = (
-        df.groupby(['region_name', 'annais'])['nombre']
-        .sum()
-        .reset_index()
-        .rename(columns={'nombre': 'total_births_region_year'})
-    )
-    
-    # Merge total births back to original dataframe
-    df_with_totals = df.merge(
-        total_births, 
-        on=['region_name', 'annais'], 
-        how='left'
-    )
-    
-    # Calculate proportion as percentage
-    df_with_totals['proportion_birth'] = (
-        df_with_totals['nombre'] / df_with_totals['total_births_region_year'] * 100
-    )
-    
-    # Clean up temporary column
-    df_with_totals = df_with_totals.drop(columns=['total_births_region_year'])
-    
-    return df_with_totals
-
-
-def create_names_by_regions_proportion_csv(input_csv_path, output_csv_path):
-    """
-    Create an enhanced dataset with birth proportions from the regional names dataset.
-    
-    Loads the processed regional names dataset, adds proportion calculations,
-    and saves the result to a new CSV file.
-
-    Parameters:
-        input_csv_path (str): Path to the input names_by_region.csv file
-        output_csv_path (str): Path where to save the enhanced CSV with proportions
-
-    Returns:
-        pd.DataFrame: The processed DataFrame with proportion data
-    """
-    
-    # Load the processed data
-    df = pd.read_csv(input_csv_path)
-    
-    # Add proportion calculations
-    df_with_proportions = add_proportion_column(df)
-    
-    # Save enhanced dataset
-    df_with_proportions.to_csv(output_csv_path, index=False)
-    
-    print(f"Successfully created {output_csv_path} with {len(df_with_proportions):,} records")
-    print(f"Proportion range: {df_with_proportions['proportion_birth'].min():.4f}% - {df_with_proportions['proportion_birth'].max():.4f}%")
-    
-    return df_with_proportions
 
 
 
@@ -216,7 +57,6 @@ def create_names_by_regions_proportion_csv(input_csv_path, output_csv_path):
 ###############################################################################
 # Visualisation 3
 ###############################################################################
-
 class Dataset:
     def __init__(self, df):
         self.df = df
@@ -436,6 +276,9 @@ def heatmap_line_percent(data_base, data):
         height=500,
         # title='Heatmap [100x100] - valeur de 0 à 100%'
     )
+    rule_50 = alt.Chart(pd.DataFrame({'y': [50]})).mark_rule(color='black', strokeDash=[4,4]).encode(
+        y=alt.Y('y:O').axis(None)
+    )
 
     # superposer line sur le heatmap, choisir seulement la ligne des noms mixtes portés par une fille
     source = data[data['sexe'] == data['sexe'].unique()[-1]]
@@ -449,5 +292,5 @@ def heatmap_line_percent(data_base, data):
                                 labelExpr=f"datum.value == {source['sexe'].unique()} ? 'Girls' : ''")
                         )
     )
-    chart = alt.layer(heatmap_base + line)
+    chart = alt.layer(heatmap_base + rule_50 + line)
     return chart
