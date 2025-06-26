@@ -440,10 +440,14 @@ def heatmap_line_percent(data_base, data):
         # title='Heatmap [100x100] - valeur de 0 à 100%'
     )
 
+    rule_50 = alt.Chart(pd.DataFrame({'y': [50]})).mark_rule(color='black', strokeDash=[4,4]).encode(
+        y=alt.Y('y:O').axis(None)
+    )
+
     # superposer line sur le heatmap, choisir seulement la ligne des noms mixtes portés par une fille
-    source = data[data['sexe'] == data['sexe'].unique()[1]]
+    source = data[data['sexe'] == data['sexe'].unique()[-1]]
     line = alt.Chart(source).mark_line().encode(
-        x=alt.X("annais:T"),
+        x=alt.X("annais:T", title="Years").axis(format="%Y"),
         y=alt.Y("pct:Q").axis(None),
         color=alt.Color("sexe:N",
                         title="Sexe",
@@ -452,5 +456,5 @@ def heatmap_line_percent(data_base, data):
                                 labelExpr=f"datum.value == {source['sexe'].unique()} ? 'Girls' : ''")
                         )
     )
-    chart = alt.layer(heatmap_base + line)
+    chart = alt.layer(heatmap_base + rule_50 + line)
     return chart
