@@ -429,7 +429,7 @@ def heatmap_line_percent(data_base, data):
         ),
         color=alt.Color('value:Q', 
                         scale=alt.Scale(
-                            scheme='greens'), 
+                            scheme='oranges'), 
                             #domain=[0, 50, 100],      
                             #range=['bleu', 'white', 'red']
                         #),
